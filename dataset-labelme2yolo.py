@@ -7,20 +7,20 @@ from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
 
-# è®¾å®šéšæœºç§å­ä»¥ç¡®ä¿å¯é‡å¤æ€§
+# Éè¶¨Ëæ»úÖÖ×ÓÒÔÈ·±£¿ÉÖØ¸´ĞÔ
 random.seed(114514)
 
-# yoloV8æ”¯æŒçš„å›¾åƒæ ¼å¼
+# yoloV8Ö§³ÖµÄÍ¼Ïñ¸ñÊ½
 # https://docs.ultralytics.com/modes/predict/?h=format+image#images
 image_formats = ["jpg", "jpeg", "png", "bmp", "webp", "tif", ".dng", ".mpo", ".pfm"]
 
 
 def copy_labled_img(json_path: Path, target_folder: Path, task: str):
-    # éå†æ”¯æŒçš„å›¾åƒæ ¼å¼ï¼ŒæŸ¥æ‰¾å¹¶å¤åˆ¶å›¾åƒæ–‡ä»¶
+    # ±éÀúÖ§³ÖµÄÍ¼Ïñ¸ñÊ½£¬²éÕÒ²¢¸´ÖÆÍ¼ÏñÎÄ¼ş
     for format in image_formats:
         image_path = json_path.with_suffix("." + format)
         if image_path.exists():
-            # æ„å»ºç›®æ ‡æ–‡ä»¶å¤¹ä¸­çš„ç›®æ ‡è·¯å¾„
+            # ¹¹½¨Ä¿±êÎÄ¼ş¼ĞÖĞµÄÄ¿±êÂ·¾¶
             target_path = target_folder / "images" / task / image_path.name
             shutil.copy(image_path, target_path)
 
@@ -37,30 +37,31 @@ def json_to_yolo(json_path: Path, sorted_keys: list):
         label = shape["label"]
         points = shape["points"]
         class_idx = sorted_keys.index(label)
-        txt_string = f"{class_idx} "
+        x_1, y_1 = points[0]
+        x_2, y_2 = points[1]
 
-        for x, y in points:
-            x /= width
-            y /= height
-            txt_string += f"{x} {y} "
+        box_width = abs(x_2 - x_1) / width
+        box_height = abs(y_2 - y_1) / height
+        x_center = (min(x_1, x_2) + (box_width / 2)) / width
+        y_center = (min(y_1, y_2) + (box_height / 2)) / height
 
-        yolo_lines.append(txt_string.strip() + "\n")
+        txt_string = f"{class_idx} {x_center} {y_center} {box_width} {box_height} "
 
     return yolo_lines
 
 
 def create_directory_if_not_exists(directory_path):
-    # ä½¿ç”¨ exist_ok=True å¯ä»¥é¿å…é‡å¤æ£€æŸ¥ç›®å½•æ˜¯å¦å­˜åœ¨
+    # Ê¹ÓÃ exist_ok=True ¿ÉÒÔ±ÜÃâÖØ¸´¼ì²éÄ¿Â¼ÊÇ·ñ´æÔÚ
     directory_path.mkdir(parents=True, exist_ok=True)
 
-# åˆ›å»ºè®­ç»ƒä½¿ç”¨çš„yamlæ–‡ä»¶
+# ´´½¨ÑµÁ·Ê¹ÓÃµÄyamlÎÄ¼ş
 def create_yaml(output_folder: Path, sorted_keys: list):
     train_img_path = Path("images") / "train"
     val_img_path = Path("images") / "val"
     train_label_path = Path("labels") / "train"
     val_label_path = Path("labels") / "val"
 
-    # åˆ›å»ºæ‰€éœ€ç›®å½•
+    # ´´½¨ËùĞèÄ¿Â¼
     for path in [train_img_path, val_img_path, train_label_path, val_label_path]:
         create_directory_if_not_exists(output_folder / path)
 
@@ -91,7 +92,7 @@ def get_labels_and_json_path(input_folder: Path):
             label = shape["label"]
             label_counts[label] += 1
     
-    # æ ¹æ®æ ‡ç­¾å‡ºç°æ¬¡æ•°æ’åºæ ‡ç­¾
+    # ¸ù¾İ±êÇ©³öÏÖ´ÎÊıÅÅĞò±êÇ©
     sorted_keys = sorted(label_counts, key=lambda k: label_counts[k], reverse=True)
     return sorted_keys, json_file_paths
 
@@ -99,10 +100,10 @@ def get_labels_and_json_path(input_folder: Path):
 def labelme_to_yolo(
     json_file_paths: list, output_folder: Path, sorted_keys: list, split_rate: float
 ):
-    # éšæœºæ‰“ä¹± JSON æ–‡ä»¶è·¯å¾„åˆ—è¡¨
+    # Ëæ»ú´òÂÒ JSON ÎÄ¼şÂ·¾¶ÁĞ±í
     random.shuffle(json_file_paths)
 
-    # è®¡ç®—è®­ç»ƒé›†å’ŒéªŒè¯é›†çš„åˆ†å‰²ç‚¹
+    # ¼ÆËãÑµÁ·¼¯ºÍÑéÖ¤¼¯µÄ·Ö¸îµã
     split_point = int(split_rate * len(json_file_paths))
     train_set = json_file_paths[:split_point]
     val_set = json_file_paths[split_point:]
@@ -126,9 +127,9 @@ def labelme_to_yolo(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="labelme2yolo")
-    parser.add_argument("input_folder", help="è¾“å…¥LabelMeæ ¼å¼æ–‡ä»¶çš„æ–‡ä»¶å¤¹")
-    parser.add_argument("output_folder", help="è¾“å‡ºYOLOæ ¼å¼æ–‡ä»¶çš„æ–‡ä»¶å¤¹")
-    parser.add_argument("split_rate", help="è°ƒæ•´è®­ç»ƒé›†å’Œæµ‹è¯•é›†çš„æ¯”é‡")
+    parser.add_argument("input_folder", help="ÊäÈëLabelMe¸ñÊ½ÎÄ¼şµÄÎÄ¼ş¼Ğ")
+    parser.add_argument("output_folder", help="Êä³öYOLO¸ñÊ½ÎÄ¼şµÄÎÄ¼ş¼Ğ")
+    parser.add_argument("split_rate", help="µ÷ÕûÑµÁ·¼¯ºÍ²âÊÔ¼¯µÄ±ÈÖØ")
 
     args = parser.parse_args()
     input_folder = Path(args.input_folder)
