@@ -1,0 +1,4 @@
+run_t.py可以以1S两张的速度稳定拍摄PNG格式文件
+
+run_ttest.py Hikvision USB Camera Synchronized Capture System简化版本 - 专注2Hz稳定拍摄和触发时间记录
+"""
