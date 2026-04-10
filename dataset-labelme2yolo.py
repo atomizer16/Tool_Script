@@ -7,20 +7,20 @@ from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
 
-# 设定随机种子以确保可重复性
+# Set random seed for reproducibility
 random.seed(114514)
 
-# yoloV8支持的图像格式
+# Image formats supported by YOLOv8
 # https://docs.ultralytics.com/modes/predict/?h=format+image#images
 image_formats = ["jpg", "jpeg", "png", "bmp", "webp", "tif", ".dng", ".mpo", ".pfm"]
 
 
 def copy_labled_img(json_path: Path, target_folder: Path, task: str):
-    # 遍历支持的图像格式，查找并复制图像文件
+    # Iterate through supported image formats to find and copy the image file
     for format in image_formats:
         image_path = json_path.with_suffix("." + format)
         if image_path.exists():
-            # 构建目标文件夹中的目标路径
+            # Build the target path within the target folder
             target_path = target_folder / "images" / task / image_path.name
             shutil.copy(image_path, target_path)
 
@@ -51,17 +51,17 @@ def json_to_yolo(json_path: Path, sorted_keys: list):
 
 
 def create_directory_if_not_exists(directory_path):
-    # 使用 exist_ok=True 可以避免重复检查目录是否存在
+    # Using exist_ok=True avoids the need to manually check if the directory exists
     directory_path.mkdir(parents=True, exist_ok=True)
 
-# 创建训练使用的yaml文件
+# Create YAML file for training
 def create_yaml(output_folder: Path, sorted_keys: list):
     train_img_path = Path("images") / "train"
     val_img_path = Path("images") / "val"
     train_label_path = Path("labels") / "train"
     val_label_path = Path("labels") / "val"
 
-    # 创建所需目录
+    # Create required directories
     for path in [train_img_path, val_img_path, train_label_path, val_label_path]:
         create_directory_if_not_exists(output_folder / path)
 
@@ -92,7 +92,7 @@ def get_labels_and_json_path(input_folder: Path):
             label = shape["label"]
             label_counts[label] += 1
     
-    # 根据标签出现次数排序标签
+    # Sort labels by their occurrence count in descending order
     sorted_keys = sorted(label_counts, key=lambda k: label_counts[k], reverse=True)
     return sorted_keys, json_file_paths
 
@@ -100,10 +100,10 @@ def get_labels_and_json_path(input_folder: Path):
 def labelme_to_yolo(
     json_file_paths: list, output_folder: Path, sorted_keys: list, split_rate: float
 ):
-    # 随机打乱 JSON 文件路径列表
+    # Randomly shuffle the list of JSON file paths
     random.shuffle(json_file_paths)
 
-    # 计算训练集和验证集的分割点
+    # Calculate the split point between training and validation sets
     split_point = int(split_rate * len(json_file_paths))
     train_set = json_file_paths[:split_point]
     val_set = json_file_paths[split_point:]
@@ -127,9 +127,9 @@ def labelme_to_yolo(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="labelme2yolo")
-    parser.add_argument("input_folder", help="输入LabelMe格式文件的文件夹")
-    parser.add_argument("output_folder", help="输出YOLO格式文件的文件夹")
-    parser.add_argument("split_rate", help="调整训练集和测试集的比重")
+    parser.add_argument("input_folder", help="Folder containing LabelMe format files")
+    parser.add_argument("output_folder", help="Folder for outputting YOLO format files")
+    parser.add_argument("split_rate", help="Adjust the ratio between training and test sets")
 
     args = parser.parse_args()
     input_folder = Path(args.input_folder)
