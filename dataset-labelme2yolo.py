@@ -1,3 +1,4 @@
+# JSON转目标检测TXT格式
 import json
 import random
 import yaml
